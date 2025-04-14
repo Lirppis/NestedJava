@@ -2,3 +2,5 @@ Note the package.bat is set up based on my enviroment variables. So it might not
 
 Mikael Virtanen
 mikael.virtanen150@outlook.com
+Ruslan Lysenko
+amk1005164@student.hamk.fi
