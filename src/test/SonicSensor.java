@@ -6,7 +6,7 @@ import lejos.robotics.SampleProvider;
 import lejos.hardware.port.SensorPort;
 
 public class SonicSensor extends Thread{
-
+    // Create the ultrasonic sensor with the correct mode
     EV3UltrasonicSensor ultrasonicSensor = new EV3UltrasonicSensor(SensorPort.S4);
     SampleProvider distance = ultrasonicSensor.getDistanceMode();
     float[] sample = new float[distance.sampleSize()];
@@ -15,6 +15,10 @@ public class SonicSensor extends Thread{
     Main main = new Main();
     MotorTest motorTest = new MotorTest();
 
+    // main function the sensor will use. 
+    // When enabled the sensor will look for object with in the danger distance. 
+    // If object is with in the danger distance, stop the motors.
+    // The printing is done mainly for debugging and can be removed once the robot is functioning appropriatly.
     public void run(){
         while (ultrasonicSensor.isEnabled()) {
             distance.fetchSample(sample, 0);
@@ -29,16 +33,3 @@ public class SonicSensor extends Thread{
 
 }
 
-
-
-// Hacky way of running the loop for x amount of time
-        // Checking if there is an obstacle infront of the robot, with ultrasopnic sensor
-        /*for (timeI = 0; timeI < 20; timeI++){
-            distance.fetchSample(sample, 0);
-            if (sample[0] < dangerDist){
-                stopMotors();
-                LCD.drawString("Obstacle detected " + sample[0], 0, 4);
-                break;
-            }
-            Delay.msDelay(100);
-        } */
