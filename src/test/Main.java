@@ -1,90 +1,76 @@
 package test;
 
-import lejos.robotics.RegulatedMotor; // Port D: Left motor | Port C: Right motor
-import lejos.hardware.motor.Motor;
 import lejos.hardware.Button;
 import lejos.hardware.lcd.LCD;
 import lejos.utility.Delay;
-import lejos.hardware.sensor.EV3UltrasonicSensor; // Port 4
-import lejos.robotics.SampleProvider;
+import lejos.hardware.motor.Motor;
+import lejos.hardware.sensor.EV3ColorSensor;
+import lejos.hardware.sensor.EV3UltrasonicSensor;
 import lejos.hardware.port.SensorPort;
+import lejos.robotics.SampleProvider;
+import java.util.concurrent.atomic.AtomicBoolean;
 
-public class Main extends Thread{
-    EV3UltrasonicSensor ultrasonicSensor = new EV3UltrasonicSensor(SensorPort.S4);
-    SampleProvider distance = ultrasonicSensor.getDistanceMode();
-    float[] sample = new float[distance.sampleSize()];
-    float dangerDist = 0.3f;
-    
-    static void stopMotors() {
-        Motor.D.startSynchronization();
-        // Stopping both motors
-        Motor.D.flt();
-        Motor.C.flt();
-        Motor.D.endSynchronization();
+public class Main {
+    public static final AtomicBoolean isAvoiding = new AtomicBoolean(false);
+
+    public static final EV3UltrasonicSensor ultrasonicSensor;
+    public static final EV3ColorSensor colorSensor;
+    public static final SampleProvider distanceProvider;
+    public static final SampleProvider colorProvider;
+    public static final float[] distanceSample;
+    public static final float[] colorSample;
+
+    public static final float DANGER_DISTANCE = 0.20f;
+
+    static {
+        ultrasonicSensor = new EV3UltrasonicSensor(SensorPort.S4);
+        colorSensor = new EV3ColorSensor(SensorPort.S3);
+
+        distanceProvider = ultrasonicSensor.getDistanceMode();
+        colorProvider = colorSensor.getRedMode();
+
+        distanceSample = new float[distanceProvider.sampleSize()];
+        colorSample = new float[colorProvider.sampleSize()];
     }
 
-    static void startMotors() {
-        //Syncing the motors and moving forward
-        Motor.D.startSynchronization();
-        Motor.D.forward();                          
-        Motor.C.forward();   
-        // Ending the sync, needs to be done everytime stopping or changing motor behaviour                       
-        Motor.D.endSynchronization();
+    public static void closeSensors() {
+        ultrasonicSensor.close();
+        colorSensor.close();
     }
+
+    public static float getDistance() {
+        distanceProvider.fetchSample(distanceSample, 0);
+        return distanceSample[0];
+    }
+
+    public static float getColorReading() {
+        colorProvider.fetchSample(colorSample, 0);
+        return colorSample[0];
+    }
+
 
     public static void main(String[] args) {
-        RegulatedMotor[] syncList = {Motor.C};
-        // Syncing motor D with the list
-        Motor.D.synchronizeWith(syncList);
+        LCD.drawString("Starting...", 0, 0);
+    
+        LineFollower lineFollowerThread = new LineFollower();
+        ObjectAvoid objectAvoidThread = new ObjectAvoid();
 
-        Thread sonic = new Main();
-        //Thread motor = new MotorThread();
-        // Creating a list of motors that can be synchronized with  
-        
+        LCD.drawString("Starting threads", 0, 1);
+        lineFollowerThread.start();
+        objectAvoidThread.start();
 
-            
-        // Printing the code version to be sure that a new version was uploaded         
-        LCD.drawString("Test version 4.12", 0, 1);
-        startMotors(); 
-        sonic.start();  
-        Delay.msDelay(3000);
-        stopMotors();                            
-        LCD.drawString("Reached halfway.", 0, 2);
-        LCD.drawString("Returning to base.", 0, 3);
-        
+        LCD.drawString("Press ESCAPE exit", 0, 4);
+        Button.ESCAPE.waitForPressAndRelease();
 
-        //Rotating both motors 410 degrees to opposite directions
-        Motor.D.startSynchronization();
-        Motor.D.rotate(410);
-        Motor.C.rotate(-410);
-        Motor.D.endSynchronization();
-        // Waiting for the rotation to finnish 
-        while (Motor.D.isMoving()){
-            Thread.yield();
-        }
+        LCD.drawString("Stopping...", 0, 5);
 
-        // Return to starting position
-        startMotors();
-        sonic.start();
-        Delay.msDelay(2000);
+        Delay.msDelay(500);
 
-        stopMotors();
-        Button.waitForAnyPress();
-        }
-
-        public void run(){
-            while (Motor.D.isMoving() && ultrasonicSensor.isEnabled()) {
-                LCD.drawString("Thread running", 0, 6);
-                distance.fetchSample(sample, 0);
-                if (sample[0] < dangerDist){
-                    stopMotors();
-                    LCD.drawString("Obstacle detected at", 0, 4);
-                    LCD.drawString("" + sample[0], 0, 5);
-                    break;
-                    }
-                }
-            }
-        }
+        Motor.D.stop(true);
+        Motor.C.stop(true); 
+        Main.closeSensors();
+    }
+}
     
     
 
