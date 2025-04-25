@@ -8,7 +8,7 @@ import lejos.hardware.Button;
 import lejos.robotics.SampleProvider;
 import lejos.utility.Delay;
 
-public class LineFollower  {
+public class LineFollower {
 
     public static void main(String[] args) {
         EV3ColorSensor colorSensor = new EV3ColorSensor(SensorPort.S3);
@@ -17,25 +17,23 @@ public class LineFollower  {
 
         float[] sensorSampleArray = new float[redModeSensorProvider.sampleSize()];
 
-        int baseMotorSpeed = 250;
+        int baseMotorSpeed = 200;
 
         Motor.C.setSpeed(baseMotorSpeed);
         Motor.D.setSpeed(baseMotorSpeed);
         Motor.C.forward();
         Motor.D.forward();
 
-        float minThreshold = 0.18f;
-        float maxThreshold = 0.22f;
-
-        float targetSensorValue = (minThreshold + maxThreshold) / 2.0f;
-
-        float proportionalGain = 500; // Kp: Adjusts reaction strength to current error
-        float integralGain = 0.01f;  // Ki: Adjusts reaction strength to accumulated error
-        float derivativeGain = 500;  // Kd: Adjusts reaction strength to rate of change of error
+        float proportionalGain = 600; // Kp
+        float integralGain = 0.02f;  // Ki
+        float derivativeGain = 700;  // Kd
 
 
         float integralAccumulator = 0;
         float previousError = 0;
+        
+        float minThreshold = 0.17f;
+        float maxThreshold = 0.23f;
 
         while (!Button.ESCAPE.isDown()) {
             redModeSensorProvider.fetchSample(sensorSampleArray, 0);
@@ -43,17 +41,28 @@ public class LineFollower  {
 
             LCD.clear();
             LCD.drawString("Intensity: " + (int)(currentSensorReading * 100), 0, 0);
-            LCD.drawString("Target:    " + (int)(targetSensorValue * 100), 0, 1);
 
-            float currentError = currentSensorReading - targetSensorValue;
+            float currentError = 0;
+            float steeringAdjustment;
 
-            integralAccumulator += currentError;
+            if (currentSensorReading >= minThreshold && currentSensorReading <= maxThreshold) {
+                steeringAdjustment = 0;
+                integralAccumulator = 0;
+            } else {
+                if (currentSensorReading < minThreshold) {
+                    currentError = currentSensorReading - minThreshold;
+                } else {
+                    currentError = currentSensorReading - maxThreshold;
+                }
 
-            float derivativeOfError = currentError - previousError;
-
-            float steeringAdjustment = (proportionalGain * currentError) +
+                integralAccumulator += currentError;
+                float derivativeOfError = currentError - previousError;
+                steeringAdjustment = (proportionalGain * currentError) +
                                        (integralGain * integralAccumulator) +
                                        (derivativeGain * derivativeOfError);
+            }
+
+            previousError = currentError;
 
             int leftMotorSpeed = (int)(baseMotorSpeed + steeringAdjustment);
             int rightMotorSpeed = (int)(baseMotorSpeed - steeringAdjustment);
@@ -64,8 +73,6 @@ public class LineFollower  {
             Motor.C.forward();
             Motor.D.forward();
             
-            previousError = currentError;
-
             Delay.msDelay(10);
         }
 
