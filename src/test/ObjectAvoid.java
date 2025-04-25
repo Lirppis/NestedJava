@@ -62,6 +62,23 @@ public class ObjectAvoid {
                  }
              }
 
+            //with the speed of 200 the robot should go forward approx. 30cm in 3.5 seconds 
+            try {
+                Thread.sleep(3500);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            // stop the motors
+            Motor.C.stop(true);
+            Motor.D.stop(true);
+
+            //turn the robot slightly to left 
+            // if no more obstacle, should follow the line
+            // if obstacle, do the while 
+            Motor.C.rotate(-120, true);
+            Motor.D.rotate(120, true);
+
              Delay.msDelay(50);
          }
 
