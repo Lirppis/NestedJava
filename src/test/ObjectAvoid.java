@@ -1,62 +1,88 @@
-
 package test;
 
 import lejos.hardware.lcd.LCD;
-import lejos.hardware.sensor.EV3UltrasonicSensor;
-import lejos.robotics.SampleProvider;
-import lejos.hardware.port.SensorPort;
-import lejos.hardware.motor.Motor;
 import lejos.utility.Delay;
 import lejos.hardware.Button;
+import lejos.hardware.motor.Motor;
 
-public class ObjectAvoid extends Thread{
+public class ObjectAvoid extends Thread {
+    int turnamount = 0;
+    private static final int baseSpeed = 200;
+    private static final int durationForward = 2000;
+    private static final int durationTurn = 200;
+    
 
-    static EV3UltrasonicSensor ultrasonicSensor = new EV3UltrasonicSensor(SensorPort.S4);
-    static SampleProvider distance = ultrasonicSensor.getDistanceMode();
-    static float[] sample = new float[distance.sampleSize()];
-    static float dangerDist = 0.20f;
-    static int baseSpeed = 200;
+    private void TurnLeft() {
+        ObjectAvoid turn = new ObjectAvoid();
+        Motor.C.setSpeed(baseSpeed);
+        Motor.D.setSpeed(baseSpeed);
+        Motor.C.forward();
+        Motor.D.backward();
+        Delay.msDelay(durationTurn);
+        Motor.D.stop(true);
+        Motor.C.stop(true);
+        Delay.msDelay(100);
+        turn.turnamount += 200;
+        Motor.C.setSpeed(baseSpeed);
+        Motor.D.setSpeed(baseSpeed);
+        Motor.C.forward();
+        Motor.D.backward();
+        Delay.msDelay(durationTurn / 2);
+        if (Main.getDistance() < Main.DANGER_DISTANCE){
+            TurnLeft();
+        }
+    }
+
+    private void MoveForward() {
+        LCD.drawString("Going forward", 0, 4);
+        Motor.C.setSpeed(baseSpeed);
+        Motor.D.setSpeed(baseSpeed);
+        Motor.C.forward();
+        Motor.D.forward();
+        Delay.msDelay(durationForward);
+        Motor.D.stop(true);
+        Motor.C.stop(true);
+        Delay.msDelay(100);
+    }
+
+    private void TurnRight() {
+        ObjectAvoid turn = new ObjectAvoid();
+        //LCD.drawString("turning right", 0, 5);
+        LCD.drawString("amount" + turnamount, 0, 5);
+        Motor.C.setSpeed(baseSpeed);
+        Motor.D.setSpeed(baseSpeed);
+        Motor.C.backward();
+        Motor.D.forward();
+        Delay.msDelay(turn.turnamount);
+        Motor.D.stop(true);
+        Motor.C.stop(true);
+        Delay.msDelay(100);
+    }
+
+    @Override
     public void run() {
-        MotorTest mControl = new MotorTest();
-        System.out.println("Simple Object Avoidance Started.");
-        LCD.clear();
-        LCD.drawString("Program START", 0, 0);
-
+        LCD.drawString("ObjectAvoid ready", 0, 3);
         while (!Button.ESCAPE.isDown()) {
-             distance.fetchSample(sample, 0);
-             float currentDistance = sample[0];
 
-             LCD.drawString("Dist: " + String.format("%.2f", currentDistance) + "m  ", 0, 5);
+            while (!Main.isAvoiding.get() && !Button.ESCAPE.isDown()) {
+                Delay.msDelay(50);
+            }
 
-             if (currentDistance < dangerDist && currentDistance > 0) {
-                 LCD.drawString("Avoiding...      ", 0, 4);
-                 mControl.StopMotors();
-                 mControl.Forward();
+            if (Button.ESCAPE.isDown()) {
+                break;
+            }
+            
+            TurnLeft();
+            MoveForward();
+            TurnRight();
 
-                 float turnCheckDistance;
-                 float safetyMargin = 0.10f;
-                 do {
-                     Delay.msDelay(20);
-                     distance.fetchSample(sample, 0);
-                     turnCheckDistance = sample[0];
-                 } while (turnCheckDistance < (dangerDist + safetyMargin) && turnCheckDistance >= 0 && !Button.ESCAPE.isDown());
+            Motor.D.stop(true);
+            Motor.C.stop(true); 
+            LCD.drawString("Avoid finished   ", 0, 6);
+            Delay.msDelay(100);
 
-                 mControl.StopMotors();
-                 LCD.clear(4);
-
-             } else {
-                 LCD.drawString("Moving Forward   ", 0, 4);
-                 if (!Motor.C.isMoving() || !Motor.D.isMoving()) {
-                      mControl.Forward();;
-                 }
-             }
-
-             Delay.msDelay(50);
-         }
-
-         mControl.StopMotors();
-         ultrasonicSensor.close();
-         LCD.clear();
-         System.out.println("Program exiting.");
-     }
- }
+            Main.isAvoiding.set(false);
+        }
+        LCD.drawString("ObjectAvoid stopped", 0, 3);
+    }
+}
