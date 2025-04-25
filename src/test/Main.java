@@ -13,25 +13,16 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class Main {
     public static final AtomicBoolean isAvoiding = new AtomicBoolean(false);
 
-    public static final EV3UltrasonicSensor ultrasonicSensor;
-    public static final EV3ColorSensor colorSensor;
-    public static final SampleProvider distanceProvider;
-    public static final SampleProvider colorProvider;
-    public static final float[] distanceSample;
-    public static final float[] colorSample;
+    static EV3UltrasonicSensor ultrasonicSensor;
+    static EV3ColorSensor colorSensor;
+    static SampleProvider distanceProvider;
+    static SampleProvider colorProvider;
+    static float[] distanceSample;
+    static float[] colorSample;
 
+    // max distance to object before start avoidance
     public static final float DANGER_DISTANCE = 0.20f;
 
-    static {
-        ultrasonicSensor = new EV3UltrasonicSensor(SensorPort.S4);
-        colorSensor = new EV3ColorSensor(SensorPort.S3);
-
-        distanceProvider = ultrasonicSensor.getDistanceMode();
-        colorProvider = colorSensor.getRedMode();
-
-        distanceSample = new float[distanceProvider.sampleSize()];
-        colorSample = new float[colorProvider.sampleSize()];
-    }
 
     public static void closeSensors() {
         ultrasonicSensor.close();
@@ -49,21 +40,37 @@ public class Main {
     }
 
 
-    public static void main(String[] args) {
-        LCD.drawString("Starting...", 0, 0);
-    
+    public static void main(String[] args) {    
+        try {
+            // initialize sensors   
+            ultrasonicSensor = new EV3UltrasonicSensor(SensorPort.S4);
+            colorSensor = new EV3ColorSensor(SensorPort.S3);
+
+            // get distance and color samples
+            distanceProvider = ultrasonicSensor.getDistanceMode();
+            colorProvider = colorSensor.getRedMode();
+            distanceSample = new float[distanceProvider.sampleSize()];
+            colorSample = new float[colorProvider.sampleSize()];
+
+        } catch (Exception e) {
+            LCD.clear();
+            LCD.drawString("Sensor Init Failed:", 0, 0);
+            Delay.msDelay(5000);
+            return;
+        }
+        // linefollower init
         LineFollower lineFollowerThread = new LineFollower();
+        // object avoid init
         ObjectAvoid objectAvoidThread = new ObjectAvoid();
 
         LCD.drawString("Starting threads", 0, 1);
+        // start threads
         lineFollowerThread.start();
         objectAvoidThread.start();
 
-        LCD.drawString("Press ESCAPE exit", 0, 4);
+        LCD.drawString("Press ESC to exit", 0, 4);
         Button.ESCAPE.waitForPressAndRelease();
-
-        LCD.drawString("Stopping...", 0, 5);
-
+        
         Delay.msDelay(500);
 
         Motor.D.stop(true);
