@@ -5,19 +5,50 @@ import lejos.hardware.Button;
 import lejos.utility.Delay;
 import lejos.hardware.motor.Motor;
 
+/**
+ * LineFollower thread continuously follows a line using PID control,
+ * while coordinating with the Main thread for obstacle avoidance.
+ * <p>
+ * It reads sensor values, computes steering adjustments, and drives motors D and C.
+ * It also stops and triggers avoidance when obstacles are detected.
+ * </p>
+ */
 public class LineFollower extends Thread {
 
-    // PID constants
+    /** Proportional gain (Kp) for PID control. */
     private final float proportionalGain = 600; // Kp
+    /** Integral gain (Ki) for PID control. */
     private final float integralGain = 0.02f;  // Ki
+    /** Derivative gain (Kd) for PID control. */
     private final float derivativeGain = 700;  // Kd
-    private float integralError = 0; // sum of errors
-    private float previousError = 0; 
-    
-    private final float minThreshold = 0.17f; // min accepted value of sensor
-    private final float maxThreshold = 0.23f; // max accepted value of sensor
+    /** Accumulated integral error for PID control. */
+    private float integralError = 0;
+    /** Previous cycle error, used for derivative calculation. */
+    private float previousError = 0;
+    /** Minimum threshold sensor reading to consider after calibration. */
+    private final float minThreshold = 0.17f;
+    /** Maximum threshold sensor reading to consider after calibration. */
+    private final float maxThreshold = 0.23f;
+    /** Base speed for both motors before PID adjustment. */
     private final int baseMotorSpeed = 200;
 
+    /**
+     * Main execution loop of the LineFollower thread.
+     * <p>
+     * This method repeatedly:
+     * <ul>
+     *   <li>Displays status on the LCD.</li>
+     *   <li>Checks for obstacle avoidance signals from Main.</li>
+     *   <li>Reads obstacle distance and triggers avoidance if too close.</li>
+     *   <li>Reads line sensor values and computes PID steering adjustment.</li>
+     *   <li>Applies motor speed updates and moves the motors.</li>
+     * </ul>
+     * The loop runs until the ESCAPE button is pressed.
+     * </p>
+     * @see Main#isAvoiding
+     * @see Main#getDistance()
+     * @see Main#getColorReading()
+     */
     @Override
     public void run() {
         LCD.drawString("LineFollower running", 0, 2);
@@ -73,15 +104,14 @@ public class LineFollower extends Thread {
                 float derivativeOfError = currentError - previousError;
                 // PID formula
                 steeringAdjustment = (proportionalGain * currentError) +
-                                       (integralGain * integralError) +
-                                       (derivativeGain * derivativeOfError);
+                                   (integralGain * integralError) +
+                                   (derivativeGain * derivativeOfError);
             }
             previousError = currentError;
 
             // calculate motor speed
             int leftMotorSpeed = (int)(baseMotorSpeed + steeringAdjustment);
             int rightMotorSpeed = (int)(baseMotorSpeed - steeringAdjustment);
-
 
             Motor.D.setSpeed(Math.max(0, leftMotorSpeed));
             Motor.C.setSpeed(Math.max(0, rightMotorSpeed));
