@@ -11,8 +11,7 @@ public class ObjectAvoid extends Thread {
     private static final int durationForward = 2000;
     private static final int durationTurn = 200;
     
-
-    private void TurnLeft() {
+private void TurnLeft() {
         ObjectAvoid turn = new ObjectAvoid();
         Motor.C.setSpeed(baseSpeed);
         Motor.D.setSpeed(baseSpeed);
@@ -22,7 +21,6 @@ public class ObjectAvoid extends Thread {
         Motor.D.stop(true);
         Motor.C.stop(true);
         Delay.msDelay(100);
-        turn.turnamount += 200;
         Motor.C.setSpeed(baseSpeed);
         Motor.D.setSpeed(baseSpeed);
         Motor.C.forward();
